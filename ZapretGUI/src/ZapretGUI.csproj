@@ -21,6 +21,11 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <!-- WMI: поиск «осиротевших» процессов winws.exe при старте GUI -->
+    <PackageReference Include="System.Management" Version="8.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
     <!-- Встроенный 7-Zip (нужен для распаковки .rar сборок flowseal). Положить бинарники в vendor\7z -->
     <None Include="..\vendor\7z\**" Pack="false" CopyToOutputDirectory="PreserveNewest" Condition="Exists('..\vendor\7z')" />
   </ItemGroup>

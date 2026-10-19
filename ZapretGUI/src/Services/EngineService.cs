@@ -176,11 +176,11 @@ public sealed class EngineService : IDisposable
     {
         try
         {
-            if (NativeMethods.AttachConsole(p.Id))
+            if (NativeMethods.AttachConsole((uint)p.Id))
             {
                 NativeMethods.SetConsoleCtrlHandler(null, true);
-                NativeMethods.GenerateConsoleCtrlEvent(NativeMethods.CTRL_C_EVENT, 0);
-                Thread.Sleep(200);
+                NativeMethods.GenerateConsoleCtrlEvent(NativeMethods.CTRL_C_EVENT, (uint)p.Id);
+                Thread.Sleep(300);
                 NativeMethods.FreeConsole();
             }
         }

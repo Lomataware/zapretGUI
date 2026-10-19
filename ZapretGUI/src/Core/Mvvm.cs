@@ -27,12 +27,14 @@ public sealed class RelayCommand : ICommand
     private readonly Action<object?> _execute;
     private readonly Func<object?, bool>? _canExecute;
 
+    // Делегирующий конструктор: синтаксис C# требует ": this(...)".
+    // Старый вариант ": _ => ..." был невалидным — это и была причина ошибки.
     public RelayCommand(Action execute, Func<bool>? canExecute = null)
-        : _ => _execute = _ => execute(), _canExecute = _ => canExecute?.Invoke() ?? true { }
+        : this(_ => execute(), canExecute == null ? null : _ => canExecute()) { }
 
     public RelayCommand(Action<object?> execute, Func<object?, bool>? canExecute = null)
     {
-        _execute = execute;
+        _execute = execute ?? throw new ArgumentNullException(nameof(execute));
         _canExecute = canExecute;
     }
 

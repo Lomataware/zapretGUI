@@ -1,0 +1,71 @@
+<UserControl x:Class="ZapretGUI.Views.UpdatePage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel MaxWidth="860">
+
+            <Border Style="{StaticResource AccentCard}" Padding="20,16">
+                <StackPanel>
+                    <TextBlock Text="Обновление компонентов с GitHub" Style="{StaticResource TitleText}" FontSize="20"/>
+                    <TextBlock Style="{StaticResource SubtitleText}" Margin="0,4,0,12">
+                        Zapret берётся из репозитория flowseal/zapret-discord-youtube (winws + WinDivert + списки),
+                        базы доменов — из bol-van/zapret, byedpi — из bol-van/byedpi.
+                    </TextBlock>
+                    <StackPanel Orientation="Horizontal">
+                        <Button Content="⬇  Обновить всё одной кнопкой" Style="{StaticResource AccentButton}"
+                                Command="{Binding UpdateAllCommand}" Margin="0,0,8,0"/>
+                        <Button Content="Открыть релизы flowseal" Style="{StaticResource DefaultButton}"
+                                Command="{Binding OpenGithubFlowsealCommand}" Margin="0,0,8,0"/>
+                        <Button Content="Документация zapret" Style="{StaticResource DefaultButton}"
+                                Command="{Binding OpenGithubZapretCommand}"/>
+                    </StackPanel>
+                    <ProgressBar Value="{Binding UpdateProgress}" Minimum="0" Maximum="100" Margin="0,14,0,4"/>
+                    <TextBlock Text="{Binding UpdateStatus}" Style="{StaticResource CaptionText}"/>
+                </StackPanel>
+            </Border>
+
+            <Border Style="{StaticResource Card}">
+                <Grid>
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                    <StackPanel>
+                        <TextBlock Text="Zapret (flowseal): winws.exe + WinDivert + list/ipset базы" Style="{StaticResource BodyText}" FontWeight="SemiBold"/>
+                        <TextBlock Style="{StaticResource CaptionText}" Margin="0,2,0,0">
+                            <Run Text="Установленная версия: "/><Run Text="{Binding FlowsealVersionInfo}"/>
+                        </TextBlock>
+                    </StackPanel>
+                    <Button Grid.Column="1" Content="Обновить" Style="{StaticResource DefaultButton}"
+                            Command="{Binding UpdateFlowsealCommand}" VerticalAlignment="Center"/>
+                </Grid>
+            </Border>
+
+            <Border Style="{StaticResource Card}">
+                <Grid>
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                    <StackPanel>
+                        <TextBlock Text="Базы доменов из bol-van/zapret (discoid, youtube, rutracker…)" Style="{StaticResource BodyText}" FontWeight="SemiBold"/>
+                        <TextBlock Text="Доклеивают недостающие ключевые домены в list-general-user.txt, не трогая основной список." Style="{StaticResource CaptionText}" Margin="0,2,0,0"/>
+                    </StackPanel>
+                    <Button Grid.Column="1" Content="Обновить базы" Style="{StaticResource DefaultButton}"
+                            Command="{Binding UpdateBasesCommand}" VerticalAlignment="Center"/>
+                </Grid>
+            </Border>
+
+            <Border Style="{StaticResource Card}">
+                <Grid>
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                    <StackPanel>
+                        <TextBlock Text="byedpi.exe (bol-van/byedpi)" Style="{StaticResource BodyText}" FontWeight="SemiBold"/>
+                        <TextBlock Style="{StaticResource CaptionText}" Margin="0,2,0,0">
+                            <Run Text="Версия: "/><Run Text="{Binding ByedpiVersionInfo}"/>
+                        </TextBlock>
+                    </StackPanel>
+                    <Button Grid.Column="1" Content="Обновить" Style="{StaticResource DefaultButton}"
+                            Command="{Binding UpdateByedpiCommand}" VerticalAlignment="Center"/>
+                </Grid>
+            </Border>
+
+            <TextBlock Style="{StaticResource CaptionText}" Margin="2,6,0,16"
+                       Text="Совет: после обновления перезапустите движок (кнопка «Перезапустить» на главной). Если включено автообновление списков, база подтягивается сама перед стартом winws."/>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

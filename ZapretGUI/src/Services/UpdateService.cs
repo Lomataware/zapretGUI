@@ -166,7 +166,7 @@ public sealed class UpdateService
         var listDirs = Directory.EnumerateDirectories(extractDir, "list", SearchOption.AllDirectories)
                                 .Concat(Directory.EnumerateDirectories(extractDir, "hostlist", SearchOption.AllDirectories))
                                 .ToList();
-        var domainLines = new HashSet<StringComparer>();
+        var domainLines = new HashSet<string>(System.StringComparer.OrdinalIgnoreCase);
         foreach (var dir in listDirs)
             foreach (var f in Directory.GetFiles(dir))
             {
@@ -184,11 +184,11 @@ public sealed class UpdateService
             .Where(d => d.Contains("discord") || d.Contains("youtube") || d.Contains("ytimg") ||
                         d.Contains("googlevideo") || d.Contains("rutracker") || d.Contains("discordapp") ||
                         d.Contains("discord.media") || d.Contains("gstatic") || d.Contains("google"))
-            .OrderBy(d => d, StringComparer.Ordinal)
+            .OrderBy(d => d, System.StringComparer.Ordinal)
             .ToList();
 
         _paths.EnsureDirs();
-        var existing = new HashSet<string>(ReadLinesSmart(_paths.ListGeneralUser).Select(s => s.Trim()), new StringComparer());
+        var existing = new HashSet<string>(ReadLinesSmart(_paths.ListGeneralUser).Select(s => s.Trim()), System.StringComparer.OrdinalIgnoreCase);
         // также то, что уже есть в основном списке — дубликаты не пишем
         foreach (var l in ReadLinesSmart(_paths.ListGeneral)) existing.Add(l.Trim());
 
@@ -434,7 +434,7 @@ public sealed class UpdateService
         return v;
     }
 
-    private static string DecodeString(byte[] h, int off, int len) => DecodeBytes(h.AsSpan(off, len).TrimEnd((byte)0, (byte)' '));
+    private static string DecodeString(byte[] h, int off, int len) => DecodeBytes(h.AsSpan(off, len).TrimEnd(stackalloc byte[] { 0, 32 }));
     private static string DecodeBytes(ReadOnlySpan<byte> b) => System.Text.Encoding.UTF8.GetString(b.ToArray());
 
     private sealed class StringComparer : IEqualityComparer<string>

@@ -24,7 +24,7 @@ public sealed class ListService
 
     public void SaveDomains(IEnumerable<string> lines)
     {
-        var clean = Normalize(lines, isDomain: true);
+        var clean = Normalize(lines, isDomain: true).ToList();
         WriteList(_paths.ListGeneralUser, clean);
         _config.Config.UserDomains = clean;
         _config.Save();
@@ -33,7 +33,7 @@ public sealed class ListService
 
     public void SaveExcludes(IEnumerable<string> lines)
     {
-        var clean = Normalize(lines, isDomain: true);
+        var clean = Normalize(lines, isDomain: true).ToList();
         WriteList(_paths.ListExcludeUser, clean);
         _config.Config.UserExcludes = clean;
         _config.Save();
@@ -41,7 +41,7 @@ public sealed class ListService
 
     public void SaveIpset(IEnumerable<string> lines)
     {
-        var clean = Normalize(lines, isDomain: false);
+        var clean = Normalize(lines, isDomain: false).ToList();
         WriteList(IpsetUserPath(), clean);
         // winws в сборке flowseal читает user ipset только если добавлен --ipset=path;
         // пробрасываем его через general профиль автоматически (см. ProfileBuilder HostlistArgs)
@@ -51,7 +51,7 @@ public sealed class ListService
 
     public void SaveIpsetExcludes(IEnumerable<string> lines)
     {
-        var clean = Normalize(lines, isDomain: false);
+        var clean = Normalize(lines, isDomain: false).ToList();
         WriteList(_paths.IpsetExcludeUser, clean);
         _config.Config.UserIpsetExcludes = clean;
         _config.Save();

@@ -1,0 +1,76 @@
+<UserControl x:Class="ZapretGUI.Views.HomePage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel MaxWidth="860" HorizontalAlignment="Stretch">
+
+            <!-- Главная карточка управления -->
+            <Border Style="{StaticResource AccentCard}" Padding="20,16">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                        <TextBlock Text="Zapret / byedpi" Style="{StaticResource TitleText}" FontSize="22"/>
+                        <TextBlock Style="{StaticResource SubtitleText}" Margin="0,4,0,0">
+                            <Run Text="Состояние: "/><Run Text="{Binding EngineStateText}" FontWeight="SemiBold"/>
+                        </TextBlock>
+                        <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                            <Button Content="▶  Запустить" Command="{Binding StartEngineCommand}"
+                                    Style="{StaticResource AccentButton}" Margin="0,0,8,0"/>
+                            <Button Content="■  Остановить" Command="{Binding StopEngineCommand}"
+                                    Style="{StaticResource ErrorButton}" Margin="0,0,8,0"/>
+                            <Button Content="↻  Перезапустить" Command="{Binding RestartEngineCommand}"
+                                    Style="{StaticResource DefaultButton}"/>
+                        </StackPanel>
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" VerticalAlignment="Center" HorizontalAlignment="Right">
+                        <Button Content="Установить как службу" Style="{StaticResource DefaultButton}"
+                                Command="{Binding InstallServiceCommand}" Margin="0,0,0,6" HorizontalAlignment="Right"/>
+                        <Button Content="Удалить службу" Style="{StaticResource DefaultButton}"
+                                Command="{Binding RemoveServiceCommand}" HorizontalAlignment="Right"/>
+                        <TextBlock Style="{StaticResource CaptionText}" Margin="0,6,0,0" HorizontalAlignment="Right">
+                            <Run Text="Служба Windows: "/><Run Text="{Binding ServiceInstalled, StringFormat={}{0}}"/>
+                        </TextBlock>
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <!-- Быстрые действия -->
+            <TextBlock Text="Быстрые действия" Style="{StaticResource BodyText}" FontWeight="SemiBold" Margin="2,14,0,6"/>
+            <WrapPanel>
+                <Button Content="⬇  Обновить всё" Style="{StaticResource DefaultButton}" Margin="0,0,8,8"
+                        Command="{Binding UpdateAllCommand}"/>
+                <Button Content="🛡  Тест блокировок" Style="{StaticResource DefaultButton}" Margin="0,0,8,8"
+                        Command="{Binding RunTestsCommand}"/>
+                <Button Content="🗂  Открыть папку конфигурации" Style="{StaticResource DefaultButton}" Margin="0,0,8,8"
+                        Command="{Binding OpenFolderCommand}"/>
+                <Button Content="🧹 Очистить DNS-кэш" Style="{StaticResource DefaultButton}" Margin="0,0,8,8"
+                        Command="{Binding FlushDnsCommand}"/>
+            </WrapPanel>
+
+            <!-- Текущая команда движка -->
+            <TextBlock Text="Текущая команда движка (как в service.bat flowseal)" Style="{StaticResource BodyText}"
+                       FontWeight="SemiBold" Margin="2,14,0,6"/>
+            <Border Style="{StaticResource Card}">
+                <DockPanel LastChildFill="True">
+                    <Button DockPanel.Dock="Right" Content="Копировать" Style="{StaticResource DefaultButton}"
+                            Command="{Binding CopyCommandLineCommand}" Margin="10,0,0,0" VerticalAlignment="Top"/>
+                    <TextBox Text="{Binding CurrentCommandPreview, Mode=OneWay}" IsReadOnly="True" TextWrapping="Wrap"
+                             AcceptsReturn="True" MinHeight="56" MaxHeight="140" VerticalScrollBarVisibility="Auto"
+                             FontFamily="{StaticResource MonoFont}" FontSize="12" BorderThickness="0" Background="Transparent"/>
+                </DockPanel>
+            </Border>
+
+            <!-- Журнал -->
+            <TextBlock Text="Журнал" Style="{StaticResource BodyText}" FontWeight="SemiBold" Margin="2,10,0,6"/>
+            <Border Style="{StaticResource Card}" Background="{DynamicResource LogBgBrush}" Padding="0">
+                <TextBox Text="{Binding LogBox, Mode=OneWay}" IsReadOnly="True" Height="220"
+                         FontFamily="{StaticResource MonoFont}" FontSize="11.5" BorderThickness="0"
+                         Background="Transparent" VerticalScrollBarVisibility="Auto" TextWrapping="NoWrap"/>
+            </Border>
+
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

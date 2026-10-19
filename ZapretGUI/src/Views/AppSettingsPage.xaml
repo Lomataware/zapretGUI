@@ -1,0 +1,118 @@
+<UserControl x:Class="ZapretGUI.Views.AppSettingsPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <UserControl.Resources>
+        <Style TargetType="TextBlock" x:Key="RowTitle" BasedOn="{StaticResource BodyText}">
+            <Setter Property="FontWeight" Value="SemiBold"/>
+        </Style>
+    </UserControl.Resources>
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel MaxWidth="860">
+
+            <!-- ================= ВНЕШНИЙ ВИД (Windows 11) ================= -->
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <TextBlock Text="Персонализация" Style="{StaticResource RowTitle}" Margin="0,0,0,8"/>
+
+                    <Grid Style="{StaticResource SettingRow}">
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="300"/></Grid.ColumnDefinitions>
+                        <StackPanel>
+                            <TextBlock Text="Тема приложения" Style="{StaticResource BodyText}"/>
+                            <TextBlock Text="Светлая / Тёмная / Системная — как в Параметрах Windows 11" Style="{StaticResource CaptionText}"/>
+                        </StackPanel>
+                        <ComboBox Grid.Column="1" ItemsSource="{Binding ThemeItems}" SelectedValuePath="Value"
+                                  SelectedValue="{Binding Cfg.Theme, Mode=TwoWay}"/>
+                    </Grid>
+
+                    <Grid Style="{StaticResource SettingRow}">
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="300"/></Grid.ColumnDefinitions>
+                        <StackPanel>
+                            <TextBlock Text="Цвет акцента" Style="{StaticResource BodyText}"/>
+                            <TextBlock Text="Hex-цвет элементов управления (#RRGGBB)" Style="{StaticResource CaptionText}"/>
+                        </StackPanel>
+                        <StackPanel Grid.Column="1" Orientation="Horizontal">
+                            <Border Width="24" Height="24" CornerRadius="4" Margin="0,0,8,0"
+                                    Background="{Binding AccentPreviewBrush}" BorderThickness="1"
+                                    BorderBrush="{DynamicResource ControlBorderBrush}"/>
+                            <TextBox Width="120" Text="{Binding Cfg.AccentHex, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                        </StackPanel>
+                    </Grid>
+
+                    <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                        <Button Content="Применить тему" Style="{StaticResource AccentButton}" Command="{Binding ApplyThemeCommand}"/>
+                        <TextBlock Text="Быстрые переключения:" Style="{StaticResource CaptionText}" VerticalAlignment="Center" Margin="14,0,8,0"/>
+                        <Button Content="☀ Light" Style="{StaticResource DefaultButton}" Margin="0,0,6,0" MinWidth="70"
+                                Command="{Binding SetThemeLightCommand}"/>
+                        <Button Content="🌙 Dark" Style="{StaticResource DefaultButton}" Margin="0,0,6,0" MinWidth="70"
+                                Command="{Binding SetThemeDarkCommand}"/>
+                        <Button Content="🖥 System" Style="{StaticResource DefaultButton}" MinWidth="80"
+                                Command="{Binding SetThemeSystemCommand}"/>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- ================= СИСТЕМА ================= -->
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <TextBlock Text="Система и запуск" Style="{StaticResource RowTitle}" Margin="0,0,0,8"/>
+
+                    <CheckBox Style="{StaticResource ToggleSwitch}" Content="Автозапуск программы с Windows"
+                              IsChecked="{Binding Cfg.StartWithWindows, Mode=TwoWay}" Margin="0,6"/>
+                    <CheckBox Style="{StaticResource ToggleSwitch}" Content="Запускать движок автоматически при старте GUI"
+                              IsChecked="{Binding Cfg.AutoStartEngineOnLaunch, Mode=TwoWay}" Margin="0,6"/>
+                    <CheckBox Style="{StaticResource ToggleSwitch}" Content="Сворачивать в системный трей"
+                              IsChecked="{Binding Cfg.MinimizeToTray, Mode=TwoWay}" Margin="0,6"/>
+                    <CheckBox Style="{StaticResource ToggleSwitch}" Content="Показывать уведомления"
+                              IsChecked="{Binding Cfg.ShowNotifications, Mode=TwoWay}" Margin="0,6"/>
+
+                    <TextBlock Text="Права и службы" Style="{StaticResource RowTitle}" Margin="0,14,0,4"/>
+                    <TextBlock Text="{Binding AdminInfo}" Style="{StaticResource CaptionText}" Margin="0,0,0,6"/>
+                    <WrapPanel>
+                        <Button Content="Установить службу Windows" Style="{StaticResource DefaultButton}"
+                                Command="{Binding InstallServiceCommand}" Margin="0,0,8,8"/>
+                        <Button Content="Удалить службу" Style="{StaticResource DefaultButton}"
+                                Command="{Binding RemoveServiceCommand}" Margin="0,0,8,8"/>
+                        <Button Content="Очистить DNS-кэш" Style="{StaticResource DefaultButton}"
+                                Command="{Binding FlushDnsCommand}" Margin="0,0,8,8"/>
+                        <Button Content="Открыть папку конфигурации" Style="{StaticResource DefaultButton}"
+                                Command="{Binding OpenFolderCommand}" Margin="0,0,8,8"/>
+                        <Button Content="Экспорт диагностики (.txt)" Style="{StaticResource DefaultButton}"
+                                Command="{Binding ExportLogsCommand}" Margin="0,0,8,8"/>
+                    </WrapPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- ================= О ПРОГРАММЕ ================= -->
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <TextBlock Text="О программе" Style="{StaticResource RowTitle}" Margin="0,0,0,8"/>
+                    <Grid Style="{StaticResource SettingRow}">
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="300"/></Grid.ColumnDefinitions>
+                        <TextBlock Text="Версия flowseal (zapret winws)" Style="{StaticResource BodyText}" VerticalAlignment="Center"/>
+                        <TextBlock Grid.Column="1" Text="{Binding FlowsealVersionInfo}" Style="{StaticResource BodyText}"
+                                   HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                    </Grid>
+                    <Grid Style="{StaticResource SettingRow}">
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="300"/></Grid.ColumnDefinitions>
+                        <TextBlock Text="Версия byedpi / базы доменов" Style="{StaticResource BodyText}" VerticalAlignment="Center"/>
+                        <TextBlock Grid.Column="1" Text="{Binding ByedpiVersionInfo}" Style="{StaticResource BodyText}"
+                                   HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                    </Grid>
+                    <Separator Style="{StaticResource Sep}"/>
+                    <TextBlock Style="{StaticResource CaptionText}" Margin="0,0,0,6">
+                        Используется ПО с GitHub: zapret-discord-youtube/bol-van (flowseal, winws.exe на WinDivert),
+                        byedpi (SOCKS5/HTTP прокси), базы доменов для обхода блокировок РФ.
+                        Все тесты обращаются к реальным сервисам: Discord gateway/media/CDN/STUN(voice), Rutracker, YouTube.
+                    </TextBlock>
+                    <StackPanel Orientation="Horizontal">
+                        <Button Content="GitHub: flowseal releases" Style="{StaticResource LinkButton}"
+                                Command="{Binding OpenGithubFlowsealCommand}" Margin="0,0,16,0"/>
+                        <Button Content="GitHub: zapret docs/FAQ" Style="{StaticResource LinkButton}"
+                                Command="{Binding OpenGithubZapretCommand}"/>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

@@ -1,0 +1,142 @@
+<UserControl x:Class="ZapretGUI.Views.EngineSettingsPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <UserControl.Resources>
+        <Style TargetType="TextBlock" x:Key="RowTitle" BasedOn="{StaticResource BodyText}">
+            <Setter Property="FontWeight" Value="SemiBold"/>
+        </Style>
+    </UserControl.Resources>
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel MaxWidth="860">
+
+            <!-- Движок и стратегия -->
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <TextBlock Text="Движок и стратегия обхода" Style="{StaticResource RowTitle}" Margin="0,0,0,8"/>
+                    <Grid Style="{StaticResource SettingRow}">
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="300"/></Grid.ColumnDefinitions>
+                        <StackPanel>
+                            <TextBlock Text="Движок" Style="{StaticResource BodyText}"/>
+                            <TextBlock Text="winws (zapref/flowseal) — прозрачный перехват; byedpi — SOCKS5/HTTP прокси" Style="{StaticResource CaptionText}"/>
+                        </StackPanel>
+                        <ComboBox Grid.Column="1" ItemsSource="{Binding EngineItems}" SelectedValuePath="Value"
+                                  SelectedValue="{Binding Cfg.Engine, Mode=TwoWay}"/>
+                    </Grid>
+                    <Grid Style="{StaticResource SettingRow}">
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="300"/></Grid.ColumnDefinitions>
+                        <StackPanel>
+                            <TextBlock Text="Стратегия (профиль команд)" Style="{StaticResource BodyText}"/>
+                            <TextBlock Text="Соответствует bat-профилям general/alt… из сборки flowseal" Style="{StaticResource CaptionText}"/>
+                        </StackPanel>
+                        <ComboBox Grid.Column="1" ItemsSource="{Binding StrategyItems}" SelectedValuePath="Value"
+                                  SelectedValue="{Binding Cfg.StrategyId, Mode=TwoWay}"/>
+                    </Grid>
+                    <Grid Style="{StaticResource SettingRow}">
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="300"/></Grid.ColumnDefinitions>
+                        <StackPanel>
+                            <TextBlock Text="Свой профиль (.bat/.txt)" Style="{StaticResource BodyText}"/>
+                            <TextBlock Text="Полный путь к файлу с командой winws (стратегия «Свой профиль»)" Style="{StaticResource CaptionText}"/>
+                        </StackPanel>
+                        <TextBox Grid.Column="1" Text="{Binding Cfg.CustomProfilePath, Mode=TwoWay}"/>
+                    </Grid>
+                </StackPanel>
+            </Border>
+
+            <!-- Фильтрация портов -->
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <TextBlock Text="Фильтрация трафика (--filter-...)" Style="{StaticResource RowTitle}" Margin="0,0,0,8"/>
+                    <Grid Style="{StaticResource SettingRow}">
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="300"/></Grid.ColumnDefinitions>
+                        <TextBlock Text="TCP-порты" Style="{StaticResource BodyText}" VerticalAlignment="Center"/>
+                        <TextBox Grid.Column="1" Text="{Binding Cfg.FilterTCPPorts, Mode=TwoWay}"/>
+                    </Grid>
+                    <Grid Style="{StaticResource SettingRow}">
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="300"/></Grid.ColumnDefinitions>
+                        <TextBlock Text="UDP-порты (Discord voice 50000-50100, 19294-19344)" Style="{StaticResource BodyText}" VerticalAlignment="Center"/>
+                        <TextBox Grid.Column="1" Text="{Binding Cfg.FilterUDPPorts, Mode=TwoWay}"/>
+                    </Grid>
+                    <CheckBox Style="{StaticResource ToggleSwitch}" Content="Фильтровать TCP" IsChecked="{Binding Cfg.FilterTCPEnabled, Mode=TwoWay}" Margin="0,6"/>
+                    <CheckBox Style="{StaticResource ToggleSwitch}" Content="Фильтровать UDP" IsChecked="{Binding Cfg.FilterUDPEnabled, Mode=TwoWay}" Margin="0,6"/>
+                    <CheckBox Style="{StaticResource ToggleSwitch}" Content="Игровые порты (game filter, ACTIVE_DISCORD_UDP.bin)" IsChecked="{Binding Cfg.GameFilterEnabled, Mode=TwoWay}" Margin="0,6"/>
+                    <Grid Style="{StaticResource SettingRow}">
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="300"/></Grid.ColumnDefinitions>
+                        <TextBlock Text="Game TCP / Game UDP (доп. диапазоны)" Style="{StaticResource BodyText}" VerticalAlignment="Center"/>
+                        <StackPanel Grid.Column="1">
+                            <TextBox Text="{Binding Cfg.GameFilterTCP, Mode=TwoWay}" Margin="0,0,0,4"/>
+                            <TextBox Text="{Binding Cfg.GameFilterUDP, Mode=TwoWay}"/>
+                        </StackPanel>
+                    </Grid>
+                </StackPanel>
+            </Border>
+
+            <!-- DPI-desync -->
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <TextBlock Text="Обход DPI (--dpi-desync)" Style="{StaticResource RowTitle}" Margin="0,0,0,8"/>
+                    <CheckBox Style="{StaticResource ToggleSwitch}" Content="Multisplit для HTTP(S) по хост-листам" IsChecked="{Binding Cfg.DesyncEnabled, Mode=TwoWay}" Margin="0,6"/>
+                    <CheckBox Style="{StaticResource ToggleSwitch}" Content="Fake TLS ClientHello вместо multisplit" IsChecked="{Binding Cfg.FakeTlsEnabled, Mode=TwoWay}" Margin="0,6"/>
+                    <CheckBox Style="{StaticResource ToggleSwitch}" Content="Fake для QUIC (UDP 443)" IsChecked="{Binding Cfg.FakeQuicEnabled, Mode=TwoWay}" Margin="0,6"/>
+                    <CheckBox Style="{StaticResource ToggleSwitch}" Content="Fake для Discord STUN/UDP (--filter-l7=discord,stun)" IsChecked="{Binding Cfg.UdpDiscordFake, Mode=TwoWay}" Margin="0,6"/>
+                    <CheckBox Style="{StaticResource ToggleSwitch}" Content="Any-protocol для неизвестного UDP" IsChecked="{Binding Cfg.AnyProtocolUdp, Mode=TwoWay}" Margin="0,6"/>
+                    <Grid Style="{StaticResource SettingRow}">
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="140"/></Grid.ColumnDefinitions>
+                        <TextBlock Text="seqovl HTTP (list-general)" Style="{StaticResource BodyText}" VerticalAlignment="Center"/>
+                        <TextBox Grid.Column="1" Text="{Binding Cfg.SeqovlHttp, Mode=TwoWay}" HorizontalAlignment="Right"/>
+                    </Grid>
+                    <Grid Style="{StaticResource SettingRow}">
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="140"/></Grid.ColumnDefinitions>
+                        <TextBlock Text="seqovl TLS (discord.media/google)" Style="{StaticResource BodyText}" VerticalAlignment="Center"/>
+                        <TextBox Grid.Column="1" Text="{Binding Cfg.SeqovlTls, Mode=TwoWay}" HorizontalAlignment="Right"/>
+                    </Grid>
+                    <Grid Style="{StaticResource SettingRow}">
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="140"/></Grid.ColumnDefinitions>
+                        <TextBlock Text="split-pos (позиция разделения)" Style="{StaticResource BodyText}" VerticalAlignment="Center"/>
+                        <TextBox Grid.Column="1" Text="{Binding Cfg.SplitPosition, Mode=TwoWay}" HorizontalAlignment="Right"/>
+                    </Grid>
+                    <Grid Style="{StaticResource SettingRow}">
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="140"/></Grid.ColumnDefinitions>
+                        <TextBlock Text="fake repeats (--dpi-desync-repeats)" Style="{StaticResource BodyText}" VerticalAlignment="Center"/>
+                        <TextBox Grid.Column="1" Text="{Binding Cfg.FakeRepeats, Mode=TwoWay}" HorizontalAlignment="Right"/>
+                    </Grid>
+                    <CheckBox Style="{StaticResource ToggleSwitch}" Content="Отдельное правило discord.media (TCP 2053..8443)" IsChecked="{Binding Cfg.DiscordMediaMultisplit, Mode=TwoWay}" Margin="0,6"/>
+                    <CheckBox Style="{StaticResource ToggleSwitch}" Content="Правило list-google + ip-id zero (youtube/googlevideo)" IsChecked="{Binding Cfg.GoogleZeroIpset, Mode=TwoWay}" Margin="0,6"/>
+                    <CheckBox Style="{StaticResource ToggleSwitch}" Content="Использовать базу IP (ipset-all.txt)" IsChecked="{Binding Cfg.IpsetEnabled, Mode=TwoWay}" Margin="0,6"/>
+                    <CheckBox Style="{StaticResource ToggleSwitch}" Content="Обновлять списки перед запуском движка" IsChecked="{Binding Cfg.AutoUpdateLists, Mode=TwoWay}" Margin="0,6"/>
+                </StackPanel>
+            </Border>
+
+            <!-- byedpi -->
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <TextBlock Text="byedpi (если выбран этот движок)" Style="{StaticResource RowTitle}" Margin="0,0,0,8"/>
+                    <Grid Style="{StaticResource SettingRow}">
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="140"/></Grid.ColumnDefinitions>
+                        <TextBlock Text="SOCKS5 порт (-s)" Style="{StaticResource BodyText}" VerticalAlignment="Center"/>
+                        <TextBox Grid.Column="1" Text="{Binding Cfg.ByedpiSocksPort, Mode=TwoWay}" HorizontalAlignment="Right"/>
+                    </Grid>
+                    <Grid Style="{StaticResource SettingRow}">
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="140"/></Grid.ColumnDefinitions>
+                        <TextBlock Text="HTTP-прокси порт (-b)" Style="{StaticResource BodyText}" VerticalAlignment="Center"/>
+                        <TextBox Grid.Column="1" Text="{Binding Cfg.ByedpiHttpPort, Mode=TwoWay}" HorizontalAlignment="Right"/>
+                    </Grid>
+                    <CheckBox Style="{StaticResource ToggleSwitch}" Content="Фрагментация (-f ..all)" IsChecked="{Binding Cfg.ByedpiFragAll, Mode=TwoWay}" Margin="0,6"/>
+                    <CheckBox Style="{StaticResource ToggleSwitch}" Content="Disorder (-o)" IsChecked="{Binding Cfg.ByedpiDisorder, Mode=TwoWay}" Margin="0,6"/>
+                    <CheckBox Style="{StaticResource ToggleSwitch}" Content="Режим find (-e)" IsChecked="{Binding Cfg.ByedpiFind, Mode=TwoWay}" Margin="0,6"/>
+                    <CheckBox Style="{StaticResource ToggleSwitch}" Content="EOF подмена (-Q eof)" IsChecked="{Binding Cfg.ByedpiEofReplace, Mode=TwoWay}" Margin="0,6"/>
+                    <CheckBox Style="{StaticResource ToggleSwitch}" Content="Не следовать редиректам (-n)" IsChecked="{Binding Cfg.ByedpiNoFollowRedirects, Mode=TwoWay}" Margin="0,6"/>
+                    <Grid Style="{StaticResource SettingRow}">
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="140"/></Grid.ColumnDefinitions>
+                        <TextBlock Text="TTL split (-m, 0 = выкл)" Style="{StaticResource BodyText}" VerticalAlignment="Center"/>
+                        <TextBox Grid.Column="1" Text="{Binding Cfg.ByedpiTtlSplit, Mode=TwoWay}" HorizontalAlignment="Right"/>
+                    </Grid>
+                </StackPanel>
+            </Border>
+
+            <StackPanel Orientation="Horizontal" Margin="2,4,0,16">
+                <Button Content="💾  Сохранить настройки" Style="{StaticResource AccentButton}" Command="{Binding SaveSettingsCommand}" Margin="0,0,8,0"/>
+                <Button Content="Сброс DNS" Style="{StaticResource DefaultButton}" Command="{Binding FlushDnsCommand}"/>
+            </StackPanel>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>
