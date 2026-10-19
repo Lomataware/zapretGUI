@@ -1,0 +1,15 @@
+<Application x:Class="ZapretGUI.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:c="clr-namespace:ZapretGUI.Controls">
+    <Application.Resources>
+        <ResourceDictionary>
+            <c:BrushByKeyConverter x:Key="BrushByKey"/>
+            <c:IntEqualityConverter x:Key="IntEq"/>
+            <c:IntToVisibilityConverter x:Key="IntEqV"/>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="Themes/Base.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </Application.Resources>
+</Application>
