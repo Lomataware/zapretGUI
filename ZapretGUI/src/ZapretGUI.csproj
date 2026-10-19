@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+    <AssemblyName>ZapretGUI</AssemblyName>
+    <RootNamespace>ZapretGUI</RootNamespace>
+    <Version>1.2.0</Version>
+    <Authors>ZapretGUI</Authors>
+    <Product>ZapretGUI — графическая оболочка для Zapret (flowseal) и byedpi</Product>
+    <Description>Графическая оболочка для zapret-discord-youtube (flowseal) и byedpi: обновление конфигураций по кнопке, темы в стиле Windows 11, тесты работоспособности в условиях блокировок РФ (Discord voice/CDN/gateway/media, Rutracker, YouTube), установка сервиса, редактор списков доменов и IP.</Description>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <LangVersion>latest</LangVersion>
+    <!-- Разрешаем сборку проекта на не-Windows CI (сам запуск — только Windows) -->
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <InvariantGlobalization>false</InvariantGlobalization>
+    <NoWarn>$(NoWarn);CA1416</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Встроенный 7-Zip (нужен для распаковки .rar сборок flowseal). Положить бинарники в vendor\7z -->
+    <None Include="..\vendor\7z\**" Pack="false" CopyToOutputDirectory="PreserveNewest" Condition="Exists('..\vendor\7z')" />
+  </ItemGroup>
+
+</Project>
