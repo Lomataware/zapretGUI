@@ -5,6 +5,11 @@ using ZapretGUI.Services;
 using SysDiag = System.Diagnostics;
 using SysIO = System.IO;
 using SysWin = System.Windows;
+using SysWinInput = System.Windows.Input;
+using SysMedColor = System.Windows.Media.Color;
+using SysMedColorConverter = System.Windows.Media.ColorConverter;
+using SysMedBrushSolid = System.Windows.Media.SolidColorBrush;
+using SysMedBrushes = System.Windows.Media.Brushes;
 
 namespace ZapretGUI.ViewModels;
 
@@ -40,9 +45,21 @@ public sealed class TestRowViewModel : ObservableObject
     }
     public string Detail { get => _detail; set => Set(ref _detail, value); }
     public string Latency { get => _latency; set => Set(ref _latency, value); }
-    public bool Running { get => _running; set => Set(ref _running, value); }
+    public bool Running
+    {
+        get => _running;
+        set
+        {
+            if (Set(ref _running, value))
+            {
+                OnPropertyChanged(nameof(VerdictText));
+                OnPropertyChanged(nameof(VerdictColorKey));
+                OnPropertyChanged(nameof(VerdictBgKey));
+            }
+        }
+    }
 
-    public string VerdictText => Verdict switch
+    public string VerdictText => Running ? "Тест…" : Verdict switch
     {
         CheckVerdict.Running => "Работает",
         CheckVerdict.Blocked => "Заблокировано",
@@ -51,13 +68,22 @@ public sealed class TestRowViewModel : ObservableObject
         _ => "Ожидание",
     };
 
-    /// <summary>Ключ кисти из словаря темы (Badge*/Success/Error).</summary>
-    public string VerdictColorKey => Verdict switch
+    /// <summary>Ключ кисти цвета текста плашки из словаря темы.</summary>
+    public string VerdictColorKey => Running ? "AccentBrush" : Verdict switch
     {
         CheckVerdict.Running => "SuccessBrush",
         CheckVerdict.Blocked => "ErrorBrush",
         CheckVerdict.PartiallyBroken => "WarningBrush",
         _ => "TextSecondaryBrush",
+    };
+
+    /// <summary>Ключ кисти фона плашки (Badge* — мягкие пастельные фоны, текст всегда читаем).</summary>
+    public string VerdictBgKey => Running ? "AccentFadeBrush" : Verdict switch
+    {
+        CheckVerdict.Running => "BadgeOkBrush",
+        CheckVerdict.Blocked => "BadgeBlockedBrush",
+        CheckVerdict.PartiallyBroken => "BadgeWarnBrush",
+        _ => "ControlFillBrush",
     };
 }
 
@@ -149,6 +175,39 @@ public sealed class MainWindowViewModel : ObservableObject
         new("Winws", "Zapret (winws / flowseal)"), new("Byedpi", "byedpi (SOCKS/HTTP прокси)"),
     };
 
+    /// <summary>ComboBox хранит string ("Winws"/"Byedpi"), а Cfg.Engine — enum. Прослойка приводит типы.</summary>
+    public string EngineSelection
+    {
+        get => Cfg.Engine.ToString();
+        set
+        {
+            if (Enum.TryParse<EngineKind>(value, out var k) && k != Cfg.Engine)
+            {
+                Cfg.Engine = k;
+                OnPropertyChanged();
+                SaveConfig();
+                RefreshCommandPreview();
+            }
+        }
+    }
+
+    /// <summary>Превью акцентного цвета для квадратика на странице настроек.</summary>
+    public System.Windows.Media.Brush AccentPreviewBrush
+    {
+        get
+        {
+            try
+            {
+                var hex = ThemeManager.NormalizeAccent(Cfg.AccentHex);
+                var c = (SysMedColor)SysMedColorConverter.ConvertFromString(hex)!;
+                var br = new SysMedBrushSolid(c);
+                br.Freeze();
+                return br;
+            }
+            catch { return SysMedBrushes.Gray; }
+        }
+    }
+
     public RelayCommand StartEngineCommand { get; }
     public RelayCommand StopEngineCommand { get; }
     public RelayCommand RestartEngineCommand { get; }
@@ -193,6 +252,9 @@ public sealed class MainWindowViewModel : ObservableObject
                 EngineState.Failed => ("Ошибка запуска", "ErrorBrush"),
                 _ => ("Остановлен", "TextSecondaryBrush"),
             };
+            OnPropertyChanged(nameof(CanStartEngine));
+            OnPropertyChanged(nameof(CanStopEngine));
+            SysWinInput.CommandManager.InvalidateRequerySuggested();
             RefreshCommandPreview();
         });
         Log.LineLogged += line => OnUi(() =>
@@ -216,7 +278,15 @@ public sealed class MainWindowViewModel : ObservableObject
         StopEngineCommand = new RelayCommand(async () => await Engine.StopAsync(), () => CanStopEngine);
         RestartEngineCommand = new RelayCommand(async () => { await Engine.StopAsync(); await Task.Delay(500); await StartEngineAsync(false); }, () => CanStopEngine);
         SaveSettingsCommand = new RelayCommand(() => { SaveConfig(); RefreshCommandPreview(); Log.Info("Настройки сохранены."); });
-        ApplyThemeCommand = new RelayCommand(() => { ThemeManager.Apply(Cfg.Theme, Cfg.AccentHex); SaveConfig(); });
+        ApplyThemeCommand = new RelayCommand(p =>
+        {
+            var mode = p as string ?? Cfg.Theme;
+            Cfg.Theme = mode;
+            ThemeManager.Apply(Cfg.Theme, Cfg.AccentHex);
+            OnPropertyChanged(nameof(Cfg));
+            OnPropertyChanged(nameof(AccentPreviewBrush));
+            SaveConfig();
+        });
         RunTestsCommand = new RelayCommand(async () => await RunTestsAsync(), () => !TestsRunning && !UpdateRunning);
         CancelTestsCommand = new RelayCommand(() => _testsCts?.Cancel(), () => TestsRunning);
         UpdateAllCommand = new RelayCommand(async () => await UpdateAllAsync(), () => !UpdateRunning);
@@ -235,7 +305,13 @@ public sealed class MainWindowViewModel : ObservableObject
         });
         ExportLogsCommand = new RelayCommand(() =>
         {
-            try { SysDiag.Process.Start("explorer.exe", $"\"{Paths.LogsDir}\""); } catch { }
+            try
+            {
+                var dst = System.ExportDiagnostics();
+                Log.Info($"Диагностика сохранена: {dst}");
+                SysDiag.Process.Start(new SysDiag.ProcessStartInfo { FileName = dst, UseShellExecute = true });
+            }
+            catch (Exception ex) { Log.Warn($"Не удалось экспортировать диагностику: {ex.Message}"); }
         });
         OpenGithubFlowsealCommand = new RelayCommand(() => OpenUrl(AppUrls.FlowsealReleasesPage));
         OpenGithubZapretCommand = new RelayCommand(() => OpenUrl(AppUrls.ZapretDocsFaq));

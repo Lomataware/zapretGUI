@@ -91,6 +91,9 @@ public static class ThemeManager
         return hex.Length >= 7 ? hex.Substring(0, 7) : "#0067C0";
     }
 
+    /// <summary>Публичная нормализация HEX-акцента (используется ViewModel для превью цвета).</summary>
+    public static string NormalizeAccent(string hex) => NormalizeHex(hex);
+
     private static string Lighten(string hex, double delta)
     {
         var c = Parse(hex);

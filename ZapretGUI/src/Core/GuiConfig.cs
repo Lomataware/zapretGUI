@@ -59,7 +59,9 @@ public sealed class GuiConfig
     public bool CheckUpdatesEnabled { get; set; } = true;    // маркер utils/check_updates.enabled как у flowseal
 
     // ===== byedpi =====
-    public int ByedpiSocksPort { get; set; } = 40001;
+    [JsonIgnore]
+    public int ByedpiSocksPort { get; set; } = 40001;   // SOCKS включается флагом -s без порта (byedpi так работает)
+    public bool ByedpiSocksEnabled { get; set; }        // -s : поднимать SOCKS5-прокси
     public int ByedpiHttpPort { get; set; } = 40000;
     public bool ByedpiFragAll { get; set; } = true;          // -f ..all (фрагментация)
     public bool ByedpiDisorder { get; set; } = true;         // -o ..disorder
@@ -84,11 +86,11 @@ public sealed class GuiConfig
     {
         new("general",  "General (базовая)",              "multisplit+fake по спискам flowseal. Рекомендуется по умолчанию."),
         new("alt",      "ALT (seqovl 650)",               "Вариант с другим смещением фрагментации — помогает при другом DPI."),
-        new("alt2",     "ALT2 (frag https split)",        "--dpi-desync=frag с fragmentацией HTTPS-пакета."),
-        new("alt3",     "ALT3 (split tcp only)",          "Только split без seqovl — мягкий вариант для чувствительных каналов."),
-        new("alt4",     "ALT4 (synfack frag)",            "Синтетический ACK + frag. Для TSPU с агрессивным DPI."),
+        new("alt2",     "ALT2 (fakedsplit)",              "--dpi-desync=fakedsplit для HTTPS-трафика."),
+        new("alt3",     "ALT3 (split2 tcp only)",         "Только split2 без seqovl — мягкий вариант для чувствительных каналов."),
+        new("alt4",     "ALT4 (fake+multisplit)",         "Комбинация fake + multisplit для ТСПУ с агрессивным DPI."),
         new("alt5",     "ALT5 (autohostlist)",            "Автоматический хост-лист: движок сам учит домены по таймаутам."),
-        new("faaketls", "FAKE TLS AUTO",                  "Подмена ClientHello фейком (как в SIMPLE FAKE), но с auto-режимом."),
+        new("faketls",  "FAKE TLS AUTO",                  "Подмена ClientHello фейком (как general (FAKE TLS AUTO).bat)."),
         new("simplefake","Simple Fake",                   "Простой fake TLS без списков IP — минимальные требования к базе."),
         new("custom",   "Свой профиль (.bat/.txt)",       "Запуск собственного профиля команд из CustomProfilePath."),
     };

@@ -124,7 +124,7 @@ public sealed class SystemService
             sb.AppendLine($"byedpi.exe: {(File.Exists(_paths.ByedpiExe) ? new FileInfo(_paths.ByedpiExe).LastWriteTime : (DateTime?)null)}");
             sb.AppendLine($"list-general.txt lines: {(File.Exists(_paths.ListGeneral) ? File.ReadAllLines(_paths.ListGeneral).Length : -1)}");
             sb.AppendLine($"ipset-all.txt lines: {(File.Exists(_paths.IpsetAll) ? File.ReadAllLines(_paths.IpsetAll).Length : -1)}");
-            if (File.Exists(_paths.LogsDir))
+            if (Directory.Exists(_paths.LogsDir))
                 foreach (var f in Directory.GetFiles(_paths.LogsDir, "*.log"))
                 {
                     sb.AppendLine($"--- {Path.GetFileName(f)} (tail 200) ---");

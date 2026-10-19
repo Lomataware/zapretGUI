@@ -171,23 +171,38 @@ public sealed class EngineService : IDisposable
 
     private int SafeExitCode() { try { return _proc?.ExitCode ?? -1; } catch { return -1; } }
 
-    /// <summary>Отправка Ctrl+C консольному приложению через AttachConsole + GenerateConsoleCtrlEvent.</summary>
+    /// <summary>
+    /// Отправка Ctrl+C консольному приложению через AttachConsole + GenerateConsoleCtrlEvent.
+    /// ВАЖНО: для CTRL_C_EVENT второй аргумент обязан быть 0 (событие рассылается всей группе
+    /// процессов, привязанных к консоли — это и есть наш движок). Передача PID возвращает ошибку.
+    /// </summary>
     private static void TryConsoleCtrl(Process p)
     {
         try
         {
+            // у GUI-процесса(WPF) своей консоли нет, но на всякий случай освобождаем старую
+            NativeMethods.FreeConsole();
             if (NativeMethods.AttachConsole((uint)p.Id))
             {
+                // игнорируем событие в самом GUI, иначе оно убьёт наше приложение
                 NativeMethods.SetConsoleCtrlHandler(null, true);
-                NativeMethods.GenerateConsoleCtrlEvent(NativeMethods.CTRL_C_EVENT, (uint)p.Id);
-                Thread.Sleep(300);
-                NativeMethods.FreeConsole();
+                try
+                {
+                    NativeMethods.GenerateConsoleCtrlEvent(NativeMethods.CTRL_C_EVENT, 0);
+                    Thread.Sleep(500);
+                }
+                finally
+                {
+                    // снимаем игнорирование и отвязываемся от консоли движка
+                    NativeMethods.SetConsoleCtrlHandler(null, false);
+                    NativeMethods.FreeConsole();
+                }
             }
         }
         catch { /* fallback к Kill внутри StopAsync */ }
     }
 
-    // ===== Служба Windows (winws --service install, аналог service.bat install) =====
+    // ===== Служба Windows (sc.exe create/start, аналог service.bat install) =====
 
     public bool IsServiceInstalled()
     {
@@ -202,36 +217,42 @@ public sealed class EngineService : IDisposable
         return false;
     }
 
+    public const string ServiceName = "zapret";
+
     public async Task<(bool ok, string message)> InstallServiceAsync()
     {
         var exe = CurrentExecutable;
         if (!File.Exists(exe)) return (false, "Бинарник движка не найден.");
         var args = BuildCurrentArgs();
-        // winws.exe поддерживает встроенный режим службы (--service install), как использует service.bat flowseal
+        // winws.exe НЕ поддерживает "--service install" — служба создаётся через sc.exe (как service.bat у flowseal)
+        var binPath = "\\\"" + exe + "\\\" " + args;
         var psi = new ProcessStartInfo
         {
-            FileName = exe,
-            Arguments = $"--service install {args}",
+            FileName = "sc.exe",
+            Arguments = $"create {ServiceName} binPath= \"{binPath}\" start= auto DisplayName= \"Zapret (winws)\"",
             UseShellExecute = false,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
             CreateNoWindow = true,
         };
         var result = await RunOnceAsync(psi, TimeSpan.FromSeconds(30));
-        _log.Info($"Установка службы: {result.output}");
-        return result.exit == 0
-            ? (true, "Служба «zapret» установлена и запускается автоматически.")
-            : (false, $"Не удалось установить службу (код {result.exit}). {Truncate(result.output + result.error, 200)}");
+        if (result.exit != 0)
+            return (false, $"sc create вернул код {result.exit}. {Truncate(result.output + result.error, 200)}");
+        // depend= AFD как в оригинальном service.bat + запуск
+        await RunOnceAsync(new ProcessStartInfo { FileName = "sc.exe", Arguments = $"description {ServiceName} \"Zapret DPI bypass (auto-service from ZapretGUI)\"", UseShellExecute = false, RedirectStandardOutput = true, CreateNoWindow = true }, TimeSpan.FromSeconds(10));
+        var start = await RunOnceAsync(new ProcessStartInfo { FileName = "sc.exe", Arguments = $"start {ServiceName}", UseShellExecute = false, RedirectStandardOutput = true, RedirectStandardError = true, CreateNoWindow = true }, TimeSpan.FromSeconds(20));
+        _log.Info($"Установка службы: {Truncate(result.output, 120)} | start: {Truncate(start.output, 120)}");
+        return (true, "Служба «zapret» установлена и запускается автоматически.");
     }
 
     public async Task<(bool ok, string message)> RemoveServiceAsync()
     {
-        var exe = CurrentExecutable;
-        if (!File.Exists(exe)) return (false, "Бинарник движка не найден.");
+        // остановка + удаление службы через sc.exe (аналог service.bat uninstall)
+        await RunOnceAsync(new ProcessStartInfo { FileName = "sc.exe", Arguments = $"stop {ServiceName}", UseShellExecute = false, RedirectStandardOutput = true, CreateNoWindow = true }, TimeSpan.FromSeconds(15));
         var psi = new ProcessStartInfo
         {
-            FileName = exe,
-            Arguments = "--service uninstall",
+            FileName = "sc.exe",
+            Arguments = $"delete {ServiceName}",
             UseShellExecute = false,
             RedirectStandardOutput = true,
             RedirectStandardError = true,

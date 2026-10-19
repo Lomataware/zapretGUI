@@ -26,7 +26,7 @@ public sealed class TestResult
 /// <summary>
 /// Реальные тесты работоспособности в условиях блокировок РФ.
 /// НЕ использует ping сайтов как основной критерий (ping часто блокируется эхо-запросами).
-/// Методы: HTTPS GET с проверкой кода/полезной нагрузки, TLS handshake к gateway端口,
+/// Методы: HTTPS GET с проверкой кода/полезной нагрузки, TLS handshake к gateway-портам,
 /// STUN Binding-запрос к Discord voice серверам (UDP 50000) — проверка именно голосового тракта,
 /// DNS-over-HTTPS разрешение для выявления DNS-блокировки, HEAD к CDN.
 /// </summary>
@@ -59,11 +59,11 @@ public sealed class BlockTestService
             expectSubstring: "<title>Discord", ct);
 
     public async Task<TestResult> TestDiscordApiAsync(CancellationToken ct) =>
-        await HttpCheckAsync("Discord", "API discord.com/api", "https://discord.com/api/v10/gateway",
+        await HttpCheckAsync("Discord", "API gateway JSON", "https://discord.com/api/v10/gateway",
             expectSubstring: "\"url\"", ct);
 
     public async Task<TestResult> TestDiscordGatewayTcpAsync(CancellationToken ct) =>
-        await TcpTlsHandshakeAsync("Discord", "WebSocket Gateway (gateway.discord.gg:443)",
+        await TcpTlsHandshakeAsync("Discord", "WebSocket Gateway TLS",
             "gateway.discord.gg", 443, ct);
 
     public async Task<TestResult> TestDiscordCdnAsync(CancellationToken ct) =>
@@ -71,21 +71,21 @@ public sealed class BlockTestService
             "https://cdn.discordapp.com/discordani/animations/static/logo/data.json", ct);
 
     public async Task<TestResult> TestDiscordMediaAsync(CancellationToken ct) =>
-        await TcpTlsHandshakeAsync("Discord", "Медиа/звонки (media.discordapp.net:443)",
+        await TcpTlsHandshakeAsync("Discord", "Медиа media.discordapp.net TLS",
             "media.discordapp.net", 443, ct);
 
     /// <summary>Голос Discord: реальный STUN Binding request к voice UDP диапазону.</summary>
     public async Task<TestResult> TestDiscordVoiceStunAsync(CancellationToken ct)
     {
-        var res = NewResult("Discord", "Voice: STUN Binding (UDP)", "stun.svc, диапазон 19294-19344/50000");
+        var res = NewResult("Discord", "Voice STUN UDP", "stun.svc, диапазон 19294-19344/50000");
         try
         {
-            // классический RFC5389 Binding Request
+            // классический RFC5389 Binding Request — сетевой порядок байтов (Big-Endian!)
             var stun = new byte[20];
-            BitConverter.GetBytes((ushort)0x0001).CopyTo(stun, 0); // type = Binding Request
-            BitConverter.GetBytes((ushort)0).CopyTo(stun, 2);      // length = 0
-            BitConverter.GetBytes(0x2112A442u).CopyTo(stun, 4);    // magic cookie
-            new Random().NextBytes(stun.AsSpan(8, 12));            // transaction id
+            System.Buffers.Binary.BinaryPrimitives.WriteUInt16BigEndian(stun.AsSpan(0, 2), 0x0001); // type = Binding Request
+            System.Buffers.Binary.BinaryPrimitives.WriteUInt16BigEndian(stun.AsSpan(2, 2), 0x0000); // length = 0
+            System.Buffers.Binary.BinaryPrimitives.WriteUInt32BigEndian(stun.AsSpan(4, 4), 0x2112A442u); // magic cookie
+            Random.Shared.NextBytes(stun.AsSpan(8, 12));           // transaction id
 
             using var udp = new UdpClient(AddressFamily.InterNetwork);
             udp.Client.ReceiveTimeout = 5000;
@@ -103,7 +103,7 @@ public sealed class BlockTestService
                     await udp.SendAsync(stun, ep);
                     var reply = await ReceiveWithTimeout(udp, TimeSpan.FromSeconds(5), ct);
                     if (reply != null && reply.Length >= 4 &&
-                        (BitConverter.ToUInt16(reply, 0) & 0xFFFF) is 0x0101 or 0x0111)
+                        System.Buffers.Binary.BinaryPrimitives.ReadUInt16BigEndian(reply.AsSpan(0, 2)) is 0x0101 or 0x0111)
                     {
                         res.Verdict = CheckVerdict.Running;
                         res.Detail = $"STUN Binding Response получен от {ep}";
@@ -135,7 +135,7 @@ public sealed class BlockTestService
     // ================= Rutracker =================
 
     public async Task<TestResult> TestRutrackerMainAsync(CancellationToken ct) =>
-        await HttpCheckAsync("Rutracker", "Главная rutracker.org", "https://rutracker.org/forum/index.php",
+        await HttpCheckAsync("Rutracker", "Главная forum/index.php", "https://rutracker.org/forum/index.php",
             expectSubstring: "RUTRACKER.ORG", ct);
 
     public async Task<TestResult> TestRutrackerMirrorAsync(CancellationToken ct) =>
@@ -149,17 +149,21 @@ public sealed class BlockTestService
     /// <summary>DNS-проверка: резолвим rutracker обычным системным DNS и DoH Cloudflare — расхождение = DNS-подмена.</summary>
     public async Task<TestResult> TestDnsPoisonAsync(CancellationToken ct)
     {
-        var res = NewResult("Rutracker", "DNS: подмена адреса (DoH vs системный)", "rutracker.org");
+        var res = NewResult("Rutracker", "DNS подмена (DoH)", "rutracker.org");
         try
         {
-            var sys = await Dns.GetHostAddressesAsync("rutracker.org", ct);
+            var sys = await Dns.GetHostAddressesAsync("rutracker.org", AddressFamily.InterNetwork, ct);
             var doh = await ResolveViaDohAsync("rutracker.org", ct);
             var sysSet = sys.Select(x => x.ToString()).ToHashSet();
-            var dohSet = doh.Select(x => x.ToString()).ToHashSet();
+            var dohSet = doh.ToHashSet();
             res.Detail = $"система: [{string.Join(", ", sysSet)}] · DoH: [{string.Join(", ", dohSet)}]";
-            res.Verdict = sysSet.SetEquals(dohSet) ? CheckVerdict.Running : CheckVerdict.Blocked;
+            bool hasSinkhole = sys.Any(ip => { var b = ip.GetAddressBytes(); return b[0] == 127 || b[0] == 10 || (b[0] == 192 && b[1] == 168); });
+            res.Verdict = (!hasSinkhole && sysSet.Count > 0 && (sysSet.Overlaps(dohSet) || dohSet.Count == 0))
+                ? CheckVerdict.Running : CheckVerdict.Blocked;
             if (res.Verdict == CheckVerdict.Blocked)
-                res.Detail += " — обнаружена DNS-подмена (характерно для ТСПУ blocking spoofing).";
+                res.Detail += hasSinkhole
+                    ? " — системный DNS вернул локальный адрес-заглушку (DNS-блокировка)."
+                    : " — расхождение системного DNS и DoH (возможна подмена ТСПУ).";
         }
         catch (OperationCanceledException) { res.Detail = "Отменено"; }
         catch (Exception ex) { res.Verdict = CheckVerdict.Unknown; res.Detail = Explain(ex); }
@@ -174,11 +178,11 @@ public sealed class BlockTestService
             expectSubstring: "YouTube", ct);
 
     public async Task<TestResult> TestYouTubeVideoStreamAsync(CancellationToken ct) =>
-        await HeadCheckAsync("YouTube", "Видеотрафик redirector.googlevideo.com",
+        await HeadCheckAsync("YouTube", "googlevideo stream",
             "https://redirector.googlevideo.com/videoplayback", ct);
 
     public async Task<TestResult> TestYouTubeImagesAsync(CancellationToken ct) =>
-        await HeadCheckAsync("YouTube", "Превью i.ytimg.com", "https://i.ytimg.com/vb/blank.gif", ct);
+        await HeadCheckAsync("YouTube", "ytimg превью", "https://i.ytimg.com/vb/blank.gif", ct);
 
     // ================= Google (инфраструктурный минимум) =================
 
@@ -228,14 +232,21 @@ public sealed class BlockTestService
             TestGoogleAsync, TestGstaticAsync, TestCloudflareApiAsync,
         };
         int done = 0;
-        // последовательно + немного параллельно, чтобы не грузить сеть и DPI подряд
-        var running = tasks.Select(t => t(ct)).ToList();
-        foreach (var task in running)
+        // параллельно, но с ограничением в 4 теста, чтобы не грузить сеть и DPI подряд
+        using var sem = new SemaphoreSlim(4);
+        var running = tasks.Select(async t =>
         {
-            try { await task; } catch (OperationCanceledException) { break; }
-            done++;
-            progress?.Report((double)done / tasks.Count);
-        }
+            await sem.WaitAsync(ct);
+            try { await t(ct); }
+            finally
+            {
+                sem.Release();
+                int cur = Interlocked.Increment(ref done);
+                progress?.Report((double)cur / tasks.Count);
+            }
+        });
+        try { await Task.WhenAll(running); }
+        catch (OperationCanceledException) { }
     }
 
     // ================= primitives =================
@@ -331,16 +342,19 @@ public sealed class BlockTestService
 
     private async Task<string[]> ResolveViaDohAsync(string host, CancellationToken ct)
     {
-        using var resp = await Http.GetAsync(
-            $"https://cloudflare-dns.com/dns-query?name={Uri.EscapeDataString(host)}&type=A",
-            HttpCompletionOption.ResponseHeadersRead, ct);
+        using var req = new HttpRequestMessage(HttpMethod.Get,
+            $"https://cloudflare-dns.com/dns-query?name={Uri.EscapeDataString(host)}&type=A");
+        // Cloudflare DOH JSON API требует Accept: application/dns-json, иначе 400 Bad Request
+        req.Headers.Accept.Add(new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("application/dns-json"));
+        using var resp = await Http.SendAsync(req, HttpCompletionOption.ResponseHeadersRead, ct);
         resp.EnsureSuccessStatusCode();
         var json = await resp.Content.ReadAsStringAsync(ct);
         var ips = new List<string>();
         using var doc = System.Text.Json.JsonDocument.Parse(json);
         if (doc.RootElement.TryGetProperty("Answer", out var answers))
             foreach (var a in answers.EnumerateArray())
-                if (a.TryGetProperty("data", out var d))
+                if (a.TryGetProperty("data", out var d) &&
+                    a.TryGetProperty("type", out var t) && t.GetInt32() == 1 /* A */)
                     ips.Add(d.GetString() ?? "");
         return ips.ToArray();
     }

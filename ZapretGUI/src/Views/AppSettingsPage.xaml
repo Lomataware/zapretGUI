@@ -98,7 +98,7 @@
                         <TextBlock Grid.Column="1" Text="{Binding ByedpiVersionInfo}" Style="{StaticResource BodyText}"
                                    HorizontalAlignment="Right" VerticalAlignment="Center"/>
                     </Grid>
-                    <Separator Style="{StaticResource Sep}"/>
+                    <Border Style="{StaticResource Sep}"/>
                     <TextBlock Style="{StaticResource CaptionText}" Margin="0,0,0,6">
                         Используется ПО с GitHub: zapret-discord-youtube/bol-van (flowseal, winws.exe на WinDivert),
                         byedpi (SOCKS5/HTTP прокси), базы доменов для обхода блокировок РФ.

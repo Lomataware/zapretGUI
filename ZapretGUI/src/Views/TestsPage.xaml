@@ -69,7 +69,7 @@
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
                                 <c:VerdictBadge Text="{Binding VerdictText}"
-                                                BackgroundKey="{Binding VerdictColorKey}"
+                                                BackgroundKey="{Binding VerdictBgKey}"
                                                 ForegroundKey="{Binding VerdictColorKey}"/>
                             </DataTemplate>
                         </DataGridTemplateColumn.CellTemplate>

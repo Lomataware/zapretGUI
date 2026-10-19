@@ -31,6 +31,23 @@ public sealed class WinwsProfileBuilder
         if (cfg.GameFilterEnabled && !string.IsNullOrWhiteSpace(cfg.GameFilterUDP))
             udpPorts += "," + cfg.GameFilterUDP.Trim();
 
+        string userIpsetArg = File.Exists($"{lst}ipset-user.txt") ? $" --ipset=\"{lst}ipset-user.txt\"" : "";
+
+        // ---- Стратегии: НЕ мутируем cfg — только локальные параметры режима desync ----
+        int seqovlHttp = cfg.SeqovlHttp, seqovlTls = cfg.SeqovlTls;
+        bool useFakeTls = cfg.FakeTlsEnabled, splitOnly = false, useFakedsplit = false;
+        switch (cfg.StrategyId)
+        {
+            case "general": break;                            // базовый multisplit
+            case "alt":  seqovlHttp = 650; seqovlTls = 681; break; // как general (ALT).bat
+            case "alt2": useFakedsplit = true; break;         // fakedsplit для HTTPS
+            case "alt3": splitOnly = true; break;             // split2 без seqovl — мягкий
+            case "alt4": break;                               // комбинированный: правила ниже уже содержат fake+multisplit
+            case "faketls":
+            case "simplefake": useFakeTls = true; break;      // FAKE TLS AUTO / Simple Fake
+            case "alt5": break;                               // autohostlist — отдельное правило ниже
+        }
+
         var global = new StringBuilder();
         if (cfg.FilterTCPEnabled) global.Append($"--wf-tcp={tcpPorts} ");
         if (cfg.FilterUDPEnabled) global.Append($"--wf-udp={udpPorts} ");
@@ -65,7 +82,7 @@ public sealed class WinwsProfileBuilder
         {
             rules.Add(
                 $"--filter-tcp=2053,2083,2087,2096,8443 --hostlist-domains=discord.media " +
-                DesyncTcp(bin, cfg, cfg.SeqovlTls));
+                DesyncTcp(bin, cfg, seqovlTls, useFakeTls, splitOnly, useFakedsplit));
         }
 
         // ---- Правило 4: google list + ip-id=zero ----
@@ -73,8 +90,9 @@ public sealed class WinwsProfileBuilder
         {
             rules.Add(
                 $"--filter-tcp=443 --hostlist=\"{lst}list-google.txt\" --ip-id=zero " +
-                DesyncTcp(bin, cfg, cfg.SeqovlTls));
+                DesyncTcp(bin, cfg, seqovlTls, useFakeTls, splitOnly, useFakedsplit));
         }
+
 
         // ---- Правило 5: основной HTTP(S) по hostlist general (+user) ----
         if (cfg.DesyncEnabled && cfg.FilterTCPEnabled)
@@ -83,7 +101,7 @@ public sealed class WinwsProfileBuilder
                 $"--filter-tcp=80,443 " +
                 HostlistArgs(lst, cfg) +
                 ExcludeArgs(lst, cfg) +
-                DesyncTcp(bin, cfg, cfg.SeqovlHttp));
+                DesyncTcp(bin, cfg, seqovlHttp, useFakeTls, splitOnly, useFakedsplit));
         }
 
         // ---- Правила QUIC/TLS по IP-базе (ipset-all) ----
@@ -92,7 +110,7 @@ public sealed class WinwsProfileBuilder
             if (cfg.FakeQuicEnabled && cfg.FilterUDPEnabled)
             {
                 rules.Add(
-                    $"--filter-udp=443 --ipset=\"{lst}ipset-all.txt\" " +
+                    $"--filter-udp=443 --ipset=\"{lst}ipset-all.txt\"" + userIpsetArg + " " +
                     ExcludeArgs(lst, cfg) +
                     $"--dpi-desync=fake --dpi-desync-repeats={cfg.FakeRepeats} " +
                     $"--dpi-desync-fake-quic=\"{bin}quic_initial_www_google_com.bin\"");
@@ -100,9 +118,9 @@ public sealed class WinwsProfileBuilder
             if (cfg.DesyncEnabled && cfg.FilterTCPEnabled)
             {
                 rules.Add(
-                    $"--filter-tcp=80,443,8443 --ipset=\"{lst}ipset-all.txt\" " +
+                    $"--filter-tcp=80,443,8443 --ipset=\"{lst}ipset-all.txt\"" + userIpsetArg + " " +
                     ExcludeArgs(lst, cfg) +
-                    DesyncTcp(bin, cfg, cfg.SeqovlHttp));
+                    DesyncTcp(bin, cfg, seqovlHttp, useFakeTls, splitOnly, useFakedsplit));
             }
         }
 
@@ -129,7 +147,7 @@ public sealed class WinwsProfileBuilder
         }
 
         // ---- FAKE TLS режим вместо multisplit (как general (FAKE TLS AUTO).bat) ----
-        if (cfg.FakeTlsEnabled)
+        if (useFakeTls)
         {
             rules.RemoveAll(r => r.Contains("--dpi-desync=multisplit"));
             rules.Add(
@@ -142,24 +160,30 @@ public sealed class WinwsProfileBuilder
         if (cfg.StrategyId == "alt5")
         {
             rules.Add(
-                $"--filter-tcp=80,443 --auto-hostlist --hostlist=\"%LISTS%list-auto.txt\" " +
-                DesyncTcp(bin, cfg, cfg.SeqovlHttp));
+                $"--filter-tcp=80,443 --autohostlist=\"{lst}list-auto\" " +
+                $"--dpi-desync=fake --dpi-desync-ttl=4 --dpi-desync-repeats={cfg.FakeRepeats} " +
+                $"--dpi-desync-fake-tls=\"{bin}tls_clienthello_www_google_com.bin\"");
         }
 
         if (rules.Count == 0)
             throw new InvalidOperationException("Не включено ни одного правила. Включите хотя бы одно на вкладке «Движок».");
 
-        return global.ToString().TrimEnd() + " --new " + string.Join(" --new ", rules.Select(NormalizeLists));
+        return global.ToString().TrimEnd() + " --new " + string.Join(" --new ", rules);
     }
 
-    private static string NormalizeLists(string rule) => rule.Replace("%LISTS%", "");
-
-    private string DesyncTcp(string bin, GuiConfig cfg, int seqovl) =>
-        cfg.FakeTlsEnabled
-            ? $"--dpi-desync=fake --dpi-desync-ttl=4 --dpi-desync-repeats={cfg.FakeRepeats}"
-            : $"--dpi-desync=multisplit --dpi-desync-split-seqovl={seqovl} " +
-              $"--dpi-desync-split-pos={cfg.SplitPosition} " +
-              $"--dpi-desync-split-seqovl-pattern=\"{bin}tls_clienthello_www_google_com.bin\"";
+    private string DesyncTcp(string bin, GuiConfig cfg, int seqovl, bool fakeTls, bool splitOnly, bool fakedsplit)
+    {
+        if (fakeTls)
+            return $"--dpi-desync=fake --dpi-desync-ttl=4 --dpi-desync-repeats={cfg.FakeRepeats} " +
+                   $"--dpi-desync-fake-tls=\"{bin}tls_clienthello_www_google_com.bin\"";
+        if (fakedsplit)
+            return "--dpi-desync=fakedsplit --dpi-desync-any-protocol=1 --dpi-desync-cutoff=n2";
+        if (splitOnly)
+            return $"--dpi-desync=split2 --dpi-desync-split-pos={cfg.SplitPosition} --dpi-desync-any-protocol=1";
+        return $"--dpi-desync=multisplit --dpi-desync-split-seqovl={seqovl} " +
+               $"--dpi-desync-split-pos={cfg.SplitPosition} " +
+               $"--dpi-desync-split-seqovl-pattern=\"{bin}tls_clienthello_www_google_com.bin\"";
+    }
 
     private string HostlistArgs(string lst, GuiConfig cfg)
     {
@@ -190,14 +214,39 @@ public sealed class WinwsProfileBuilder
 
     private string BuildFromCustomProfile(GuiConfig cfg)
     {
-        var text = File.ReadAllText(cfg.CustomProfilePath);
-        // из bat/txt профиля извлекаем только строку запуска winws (после winws.exe), убираем переносы ^
-        var lines = text.Split('\n').Select(l => l.Trim()).Where(l => l.Contains("winws.exe")).ToList();
-        if (lines.Count == 0)
-            throw new InvalidOperationException("В пользовательском профиле не найдена строка запуска winws.exe");
-        var joined = string.Join(" ", lines).Replace("^", " ");
-        var idx = joined.IndexOf("winws.exe", StringComparison.OrdinalIgnoreCase) + "winws.exe".Length;
-        return joined[idx..].Trim();
+        var bin = EnsureTrailingSlash(_paths.BinDir);
+        var lst = EnsureTrailingSlash(_paths.ListsDir);
+        var raw = File.ReadAllLines(cfg.CustomProfilePath);
+        // склеиваем bat-продолжения строк через ^, затем берём ВСЮ команду запуска winws целиком
+        var logical = new List<string>();
+        var sbLine = new StringBuilder();
+        foreach (var line in raw)
+        {
+            var t = line.Trim();
+            if (t.EndsWith("^")) { sbLine.Append(t[..^1]).Append(' '); continue; }
+            sbLine.Append(t);
+            logical.Add(sbLine.ToString());
+            sbLine.Clear();
+        }
+        if (sbLine.Length > 0) logical.Add(sbLine.ToString());
+
+        var cmdLine = logical.FirstOrDefault(l => l.Contains("winws", StringComparison.OrdinalIgnoreCase));
+        if (cmdLine == null)
+            throw new InvalidOperationException("В пользовательском профиле не найдена команда запуска winws.exe");
+
+        // разворачиваем переменные flowseal .bat профилей (%LISTS%, %BIN%, %~dp0...)
+        cmdLine = cmdLine.Replace("%LISTS%", lst).Replace("%list%", lst).Replace("%LISTDIR%", lst)
+                         .Replace("%BIN%", bin).Replace("%bin%", bin)
+                         .Replace("%~dp0lists\\", lst).Replace("%~dp0bin\\", bin)
+                         .Replace("%~dp0", _paths.Root + "\\");
+        // вырезаем аргументы: всё после имени exe (в кавычках или без)
+        var m = System.Text.RegularExpressions.Regex.Match(cmdLine,
+            @"[^\s]*winws\.exe[^\s]*\s*(.*)$", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        if (!m.Success)
+            throw new InvalidOperationException("Не удалось разобрать команду запуска winws.exe в профиле.");
+        var args = m.Groups[1].Value.Trim();
+        args = System.Text.RegularExpressions.Regex.Replace(args, @"\s+", " ");
+        return args;
     }
 
     private static string EnsureTrailingSlash(string s) => s.EndsWith('\\') ? s : s + "\\";
@@ -209,15 +258,25 @@ public sealed class ByedpiProfileBuilder
     public string BuildArgs(GuiConfig cfg)
     {
         var sb = new StringBuilder();
-        // byedpi слушает прокси-порты; трафик туда направляется вручную или через прокси-настройки приложения
-        sb.Append($"-p{cfg.ByedpiHttpPort} -s{cfg.ByedpiSocksPort} ");
-        if (cfg.ByedpiFragAll) sb.Append("-f ..all ");
-        if (cfg.ByedpiDisorder) sb.Append("-o ..disorder ");
-        if (cfg.ByedpiFind) sb.Append("-e find ");
-        if (cfg.ByedpiEofReplace) sb.Append("-Q eof ");
-        if (cfg.ByedpiTtlSplit > 0) sb.Append($"-m {cfg.ByedpiTtlSplit} ");
-        if (cfg.ByedpiNoFollowRedirects) sb.Append("-n ");
-        sb.Append("-w1 -d1"); // защита от WISP-подобных DPI + логирование в stdout
+        // Корректные ключи byedpi/ciadpi (github.com/bol-van/byedpi):
+        // -p <port> HTTP(S)-порт прокси; -s включает SOCKS5 на том же порту (флаг без значения!)
+        sb.Append($"-p{cfg.ByedpiHttpPort} ");
+        if (cfg.ByedpiSocksEnabled) sb.Append("-s ");
+        // фрагментация: -f <modes> (bitmask: 1=TCP_HTTP, 2=TLS1.2...); "-fa" нет — используем числовой режим
+        if (cfg.ByedpiFragAll) sb.Append("-f7 ");       // все основные L7 протоколы
+        else sb.Append("-f2 ");                          // только TLS1.2
+        // disorder: -o <modes>:<packetno>
+        if (cfg.ByedpiDisorder) sb.Append("-o7:1 ");
+        // find-only: -1 (only detect, no modification)
+        if (cfg.ByedpiFind) sb.Append("-1 ");
+        // EOF-замена последних байтов: -Q <mode>
+        if (cfg.ByedpiEofReplace) sb.Append("-Q7 ");
+        // TTL для фрагментов/split: -m <ttl>
+        if (cfg.ByedpiTtlSplit > 0) sb.Append($"-m{cfg.ByedpiTtlSplit} ");
+        // redirect/keepalive модификации: -n no keepalive alive-from-dpi? (byedpi: -N disallow keepalive)
+        if (cfg.ByedpiNoFollowRedirects) sb.Append("-N ");
+        // wisp-like mode: -W
+        sb.Append("-d1");                                // уровень логов в stdout
         return sb.ToString().Trim();
     }
 }

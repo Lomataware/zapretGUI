@@ -112,19 +112,19 @@
                     <TextBlock Text="byedpi (если выбран этот движок)" Style="{StaticResource RowTitle}" Margin="0,0,0,8"/>
                     <Grid Style="{StaticResource SettingRow}">
                         <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="140"/></Grid.ColumnDefinitions>
-                        <TextBlock Text="SOCKS5 порт (-s)" Style="{StaticResource BodyText}" VerticalAlignment="Center"/>
-                        <TextBox Grid.Column="1" Text="{Binding Cfg.ByedpiSocksPort, Mode=TwoWay}" HorizontalAlignment="Right"/>
+                        <TextBlock Text="SOCKS5 прокси на том же порту (-s)" Style="{StaticResource BodyText}" VerticalAlignment="Center"/>
+                        <CheckBox Grid.Column="1" Style="{StaticResource ToggleSwitch}" IsChecked="{Binding Cfg.ByedpiSocksEnabled, Mode=TwoWay}" HorizontalAlignment="Right"/>
                     </Grid>
                     <Grid Style="{StaticResource SettingRow}">
                         <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="140"/></Grid.ColumnDefinitions>
-                        <TextBlock Text="HTTP-прокси порт (-b)" Style="{StaticResource BodyText}" VerticalAlignment="Center"/>
+                        <TextBlock Text="HTTP(S)-прокси порт (-p)" Style="{StaticResource BodyText}" VerticalAlignment="Center"/>
                         <TextBox Grid.Column="1" Text="{Binding Cfg.ByedpiHttpPort, Mode=TwoWay}" HorizontalAlignment="Right"/>
                     </Grid>
-                    <CheckBox Style="{StaticResource ToggleSwitch}" Content="Фрагментация (-f ..all)" IsChecked="{Binding Cfg.ByedpiFragAll, Mode=TwoWay}" Margin="0,6"/>
+                    <CheckBox Style="{StaticResource ToggleSwitch}" Content="Фрагментация всех протоколов (-f7)" IsChecked="{Binding Cfg.ByedpiFragAll, Mode=TwoWay}" Margin="0,6"/>
                     <CheckBox Style="{StaticResource ToggleSwitch}" Content="Disorder (-o)" IsChecked="{Binding Cfg.ByedpiDisorder, Mode=TwoWay}" Margin="0,6"/>
-                    <CheckBox Style="{StaticResource ToggleSwitch}" Content="Режим find (-e)" IsChecked="{Binding Cfg.ByedpiFind, Mode=TwoWay}" Margin="0,6"/>
-                    <CheckBox Style="{StaticResource ToggleSwitch}" Content="EOF подмена (-Q eof)" IsChecked="{Binding Cfg.ByedpiEofReplace, Mode=TwoWay}" Margin="0,6"/>
-                    <CheckBox Style="{StaticResource ToggleSwitch}" Content="Не следовать редиректам (-n)" IsChecked="{Binding Cfg.ByedpiNoFollowRedirects, Mode=TwoWay}" Margin="0,6"/>
+                    <CheckBox Style="{StaticResource ToggleSwitch}" Content="Только детект без модификации (-1)" IsChecked="{Binding Cfg.ByedpiFind, Mode=TwoWay}" Margin="0,6"/>
+                    <CheckBox Style="{StaticResource ToggleSwitch}" Content="EOF подмена (-Q)" IsChecked="{Binding Cfg.ByedpiEofReplace, Mode=TwoWay}" Margin="0,6"/>
+                    <CheckBox Style="{StaticResource ToggleSwitch}" Content="Без keepalive-модификаций (-N)" IsChecked="{Binding Cfg.ByedpiNoFollowRedirects, Mode=TwoWay}" Margin="0,6"/>
                     <Grid Style="{StaticResource SettingRow}">
                         <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="140"/></Grid.ColumnDefinitions>
                         <TextBlock Text="TTL split (-m, 0 = выкл)" Style="{StaticResource BodyText}" VerticalAlignment="Center"/>

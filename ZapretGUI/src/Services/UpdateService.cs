@@ -121,11 +121,12 @@ public sealed class UpdateService
         _paths.EnsureDirs();
         CopyMatching(inner, "bin", _paths.BinDir, "*.*", overwriteAlways: true);
         // списки: перезаписываем только служебные, user-файлы не трогаем
-        CopyMatching(inner, "lists", _paths.ListsDir, "list-general.txt", false);
-        CopyMatching(inner, "lists", _paths.ListsDir, "list-google.txt", false);
-        CopyMatching(inner, "lists", _paths.ListsDir, "list-exclude.txt", false);
-        CopyMatching(inner, "lists", _paths.ListsDir, "ipset-all.txt", false);
-        CopyMatching(inner, "lists", _paths.ListsDir, "ipset-exclude.txt", false);
+        // служебные списки ВСЕГДА перезаписываем свежими из релиза (user-файлы *-user.txt не трогаем)
+        CopyMatching(inner, "lists", _paths.ListsDir, "list-general.txt", true);
+        CopyMatching(inner, "lists", _paths.ListsDir, "list-google.txt", true);
+        CopyMatching(inner, "lists", _paths.ListsDir, "list-exclude.txt", true);
+        CopyMatching(inner, "lists", _paths.ListsDir, "ipset-all.txt", true);
+        CopyMatching(inner, "lists", _paths.ListsDir, "ipset-exclude.txt", true);
         CopyMatching(inner, "", _paths.Root, "service.bat", false);
         CopyMatching(inner, "utils", _paths.UtilsDir, "targets.txt", false);
 
@@ -231,8 +232,10 @@ public sealed class UpdateService
             var ext = Path.Combine(tmp, "x");
             if (Directory.Exists(ext)) Directory.Delete(ext, true);
             ZipFile.ExtractToDirectory(path, ext);
-            var exe = Directory.EnumerateFiles(ext, "byedpi.exe", SearchOption.AllDirectories).FirstOrDefault();
-            if (exe == null) throw new InvalidOperationException("byedpi.exe не найден в архиве.");
+            // в релизах bol-van/byedpi для Windows бинарник называется ciadpi.exe
+            var exe = Directory.EnumerateFiles(ext, "*.exe", SearchOption.AllDirectories)
+                .FirstOrDefault(f => { var n = Path.GetFileName(f).ToLowerInvariant(); return n.Contains("byedpi") || n.Contains("ciadpi"); });
+            if (exe == null) throw new InvalidOperationException("byedpi.exe/ciadpi.exe не найден в архиве.");
             File.Copy(exe, _paths.ByedpiExe, overwrite: true);
         }
         else if (asset.Name.EndsWith(".gz", StringComparison.OrdinalIgnoreCase))
